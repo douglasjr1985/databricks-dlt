@@ -1,0 +1,7 @@
+name: bundle
+version: 1.0.0
+assets:
+  notebooks:
+    - path: project1/notebooks/transform1.sql
+  configurations:
+    - path: project1/configs/config.yaml
