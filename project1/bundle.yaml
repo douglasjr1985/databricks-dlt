@@ -1,4 +1,4 @@
-name: bundle
+name: databricks-dlt
 version: 1.0.0
 assets:
   notebooks:

@@ -24,7 +24,7 @@ def copy_file_with_check(src, dst):
 
 # Copiar os notebooks para o bundle
 notebook_dir = os.path.join(bundle_path, 'notebooks')
-os.makedirs(notebook_dir, existok=True)
+os.makedirs(notebook_dir, exist_ok=True)
 for notebook in assets['notebooks']:
     if not copy_file_with_check(notebook['path'], notebook_dir):
         raise FileNotFoundError(f"Arquivo {notebook['path']} não encontrado.")

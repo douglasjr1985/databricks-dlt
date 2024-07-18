@@ -1,63 +1,44 @@
-name: CI
+name: Deploy Databricks Bundle
 
 on:
   push:
     branches:
       - main
-      - dev
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    env:
-      REPO_PATH: /Repos/Development/databricks-gold-pipeline-dlt
+
+    strategy:
+      matrix:
+        project: [project1]
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
+    - name: Checkout repository
+      uses: actions/checkout@v2
 
-      - name: Setup Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: 3.8
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'
 
-      - name: Install dependencies
-        run: |
-          pip install databricks-cli
-          pip install pytest setuptools wheel
+    - name: Install dependencies
+      run: |
+        pip install databricks-cli pyyaml
 
-      - name: Set Databricks environment variables
-        run: |
-          echo "DATABRICKS_HOST=https://${{ secrets.DATABRICKS_HOST }}" >> $GITHUB_ENV
-          echo "DATABRICKS_TOKEN=${{ secrets.DATABRICKS_TOKEN }}" >> $GITHUB_ENV
+    - name: Create Databricks Bundle
+      run: |
+        cd ${{ matrix.project }}
+        python create_bundle.py
 
-      - name: Debug - Print environment variables
-        run: |
-          echo "DATABRICKS_HOST=${{ env.DATABRICKS_HOST }}"
-          echo "DATABRICKS_TOKEN=${{ env.DATABRICKS_TOKEN }}"
+    - name: Upload Databricks Bundle
+      run: |
+        databricks fs cp -r ${{ matrix.project }}/databricks-dlt_1.0.0 dbfs:/FileStore/databricks-dlt_1.0.0
 
-      - name: Extract branch name
-        id: extract_branch
-        run: echo "branch=$(echo ${GITHUB_REF#refs/heads/})" >> $GITHUB_ENV
-
-      - name: Pull latest changes in Databricks Repo
-        env:
-          DATABRICKS_HOST: ${{ env.DATABRICKS_HOST }}
-          DATABRICKS_TOKEN: ${{ env.DATABRICKS_TOKEN }}
-        run: |
-          databricks repos update --path ${{ env.REPO_PATH }} --branch "${{ env.branch }}"
-
-      - name: Update Databricks Repo
-        env:
-          DATABRICKS_HOST: ${{ env.DATABRICKS_HOST }}
-          DATABRICKS_TOKEN: ${{ env.DATABRICKS_TOKEN }}
-        run: |
-          databricks repos update --path ${{ env.REPO_PATH }} --branch "${{ env.branch }}"
-
-      - name: Run pipeline script
-        env:
-          DATABRICKS_HOST: ${{ env.DATABRICKS_HOST }}
-          DATABRICKS_TOKEN: ${{ env.DATABRICKS_TOKEN }}
-          DATABRICKS_TARGET: ${{ secrets.DATABRICKS_TARGET }}
-        run: |
-          python main.py
+    - name: Deploy DLT Pipeline
+      run: |
+        databricks sql --path dbfs:/FileStore/databricks-dlt_1.0.0/notebooks/transform1.sql
+        databricks sql --path dbfs:/FileStore/databricks-dlt_1.0.0/notebooks/transform2.sql
+      env:
+        DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+        DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
